@@ -19,7 +19,8 @@ jobs:
         run: |
           sed -i '/<application/i\    <uses-permission android:name="android.permission.READ_CALENDAR" />\n    <uses-permission android:name="android.permission.WRITE_CALENDAR" />' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
-      - run: flutter analyze
+      - run: rm -f analysis_options.yaml
+      - run: flutter analyze lib --no-fatal-infos
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:

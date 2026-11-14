@@ -165,7 +165,7 @@ class _HomeState extends State<Home> {
       const SizedBox(height: 16),
       TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), border: OutlineInputBorder(), labelText: 'Search opportunities'), onChanged: (v) => setState(() => query = v)),
       const SizedBox(height: 12),
-      ...filtered.map((o) => Card(child: ListTile(title: Text(o.title), subtitle: Text('${o.tag}\n${o.status}'), isThreeLine: true, trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Detail(o))))),
+      ...filtered.map((o) => Card(child: ListTile(title: Text(o.title), subtitle: Text('${o.tag}\n${o.status}'), isThreeLine: true, trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Detail(o)))))),
       if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('No matching opportunities.')),
       const SizedBox(height: 16),
       Text('Prepare your application', style: Theme.of(context).textTheme.titleLarge),
