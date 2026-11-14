@@ -84,6 +84,37 @@ final cutoffUtc = <String, DateTime>{
   'EIC Accelerator': DateTime.utc(2027, 1, 20, 16),
   'EIC Pre-Accelerator 2027': DateTime.utc(2027, 11, 18),
 };
+final loans = <LoanOpportunity>[
+  LoanOpportunity('HBOR loan for SME RDI and AI', 'Croatia · Innovation / AI',
+    'Open while NRRP funds remain', '€100,000–€1,000,000; startups up to €500,000',
+    '2% fixed per year (may be higher under state-aid rules)',
+    'Croatian micro, small or medium private-sector company doing RDI or developing, implementing or using AI. Up to 75% or 85% of eligible investment; own contribution required.',
+    'Equipment, software, R&D and innovation investment; check eligible cost rules and exclusions.',
+    'https://www.hbor.hr/investments-by-smes-in-rdi-and-ai-under-the-national-recovery-and-resilience-plan-nrrp/2727'),
+  LoanOpportunity('HAMAG-BICRO Small Loans for Industrial Transition', 'Croatia · Regional value chains',
+    'Reopens 20 November 2026 at 08:00; funds are limited', 'See current programme terms',
+    'See current programme terms',
+    'Micro, small or medium company operating for over 3 years, headquartered and active in Panonian, Northern or Adriatic Croatia, and listed among mapped regional value-chain stakeholders.',
+    'Investment aligned with an eligible regional value chain. Confirm the company and project are mapped before applying.',
+    'https://hamagbicro.hr/financijski-instrumenti/kako-do-zajma/investicije/mali-zajmovi-za-industrijsku-tranziciju/'),
+  LoanOpportunity('HAMAG-BICRO Micro Loans for Growth and Inclusion', 'Croatia · Start-up / inclusion',
+    'Check current application availability', 'Up to €50,000',
+    'Verify current rate and possible principal write-off conditions',
+    'Micro and small businesses meeting the programme’s start-up or vulnerable-group criteria. Confirm ownership and age rules in the current terms.',
+    'Tangible or intangible assets and limited working capital; real estate and refinancing are excluded.',
+    'https://hamagbicro.hr/pitanja-i-odgovori/mikro-zajmovi-za-rast-i-ukljucenost/'),
+  LoanOpportunity('HBOR loan for inventions', 'Croatia · Prototype / IP',
+    'Check current programme terms', 'Loan amount subject to HBOR assessment',
+    'Confirm current rate and contribution with HBOR',
+    'Croatian SMEs with a certified prototype or technology and a patent/IP protection step, or qualifying development expenses after two years of operation.',
+    'Equipment and other fixed assets; working capital is generally capped at 30% of investment. HBOR may finance up to 85% of estimated investment value.',
+    'https://www.hbor.hr/en/kreditni_program/inventions'),
+];
+
+class LoanOpportunity {
+  const LoanOpportunity(this.title, this.tag, this.status, this.amount, this.rate, this.eligibility, this.purpose, this.url);
+  final String title, tag, status, amount, rate, eligibility, purpose, url;
+}
 List<Opportunity> get opportunities => allOpportunities.where((o) {
   final cutoff = cutoffUtc[o.title];
   return cutoff != null && DateTime.now().toUtc().isBefore(cutoff);
@@ -248,12 +279,37 @@ class _HomeState extends State<Home> {
       const SizedBox(height: 12),
       ...filtered.map((o) => OpportunityCard(o)),
       if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('No matching opportunities in this snapshot. Check official sources for newer calls.')),
+      const SizedBox(height: 20),
+      Text('Loans for Croatian companies', style: Theme.of(context).textTheme.headlineSmall),
+      const SizedBox(height: 8),
+      const Text('Repayable financing; terms and availability can change. Check current official programme documents.'),
+      const SizedBox(height: 8),
+      ...loans.map((loan) => LoanCard(loan)),
       const SizedBox(height: 16),
       Text('Prepare your application', style: Theme.of(context).textTheme.titleLarge),
       const Text('Common starting materials: registration and ownership records; accounts and funding history; project and technical plan; budget and co-financing evidence; partner information; CVs and IP evidence. These are preparation suggestions, not a universal mandatory list.'),
       const SizedBox(height: 24),
     ]))));
   }
+}
+
+class LoanCard extends StatelessWidget {
+  const LoanCard(this.loan, {super.key});
+  final LoanOpportunity loan;
+  @override Widget build(BuildContext context) => Card(margin: const EdgeInsets.only(bottom: 10), child: ExpansionTile(
+    leading: const Icon(Icons.payments_outlined), title: Text(loan.title), subtitle: Text('${loan.amount} · ${loan.status}'),
+    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+      Align(alignment: Alignment.centerLeft, child: Text(loan.tag, style: Theme.of(context).textTheme.labelLarge)),
+      const SizedBox(height: 8),
+      _loanRow('Interest / contribution', loan.rate), _loanRow('Who may qualify', loan.eligibility), _loanRow('Potential use', loan.purpose),
+      Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: () async {
+        try {
+          if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) { await bridge.invokeMethod('openUrl', loan.url); }
+          else if (Platform.isWindows) { await Process.start('rundll32.exe', ['url.dll,FileProtocolHandler', loan.url]); }
+        } catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open link'))); }
+      }, icon: const Icon(Icons.open_in_new), label: const Text('Official details'))),
+    ]));
+  Widget _loanRow(String title, String value) => Padding(padding: const EdgeInsets.only(top: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.bold)), Text(value)]));
 }
 
 class OpportunityCard extends StatelessWidget {
