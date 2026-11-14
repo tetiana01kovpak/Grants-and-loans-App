@@ -37,7 +37,7 @@ final class GrantCalendarBridge {
                 guard self.defaults.bool(forKey: "grantCalendarEnabled") else { result(nil); return }
                 let status = EKEventStore.authorizationStatus(for: .event)
                 if #available(iOS 17.0, macOS 14.0, *) {
-                    guard status == .writeOnly || status == .fullAccess else { result(nil); return }
+                    guard status == .fullAccess else { result(nil); return }
                 } else {
                     guard status == .authorized else { result(nil); return }
                 }
@@ -57,13 +57,33 @@ final class GrantCalendarBridge {
             }
         }
         if #available(iOS 17.0, macOS 14.0, *) {
-            store.requestWriteOnlyAccessToEvents(completion: completion)
+            store.requestFullAccessToEvents(completion: completion)
         } else {
             store.requestAccess(to: .event, completion: completion)
         }
     }
 
     private func addEvents(_ items: [[String: Any]], result: @escaping FlutterResult) {
+        let activeKeys = Set(items.compactMap { $0["id"] as? String })
+        var removed = 0
+        for (key, value) in defaults.dictionaryRepresentation() where key.hasPrefix("grantEvent:") {
+            let title = String(key.dropFirst("grantEvent:".count))
+            guard !activeKeys.contains(title), let identifier = value as? String else { continue }
+            guard let event = store.event(withIdentifier: identifier) else {
+                defaults.removeObject(forKey: key)
+                continue
+            }
+            let notes = event.notes ?? ""
+            guard event.title == title, notes.contains("Check the official source:"),
+                  notes.contains("This calendar time is a reminder"), event.startDate < Date() else { continue }
+            do {
+                try store.remove(event, span: .thisEvent, commit: true)
+                defaults.removeObject(forKey: key)
+                removed += 1
+            } catch {
+                result(FlutterError(code: "CALENDAR", message: error.localizedDescription, details: nil)); return
+            }
+        }
         guard let calendar = store.defaultCalendarForNewEvents else {
             result(FlutterError(code: "NO_CALENDAR", message: "No default writable calendar is available. Set one up in Calendar first.", details: nil)); return
         }
@@ -72,7 +92,9 @@ final class GrantCalendarBridge {
             guard let id = item["id"] as? String, let milliseconds = item["time"] as? NSNumber else { continue }
             let date = Date(timeIntervalSince1970: milliseconds.doubleValue / 1000)
             let key = "grantEvent:" + id
-            guard date > Date(), !defaults.bool(forKey: key) else { continue }
+            // Older versions stored a boolean rather than an event identifier.
+            // Keep it to avoid adding a duplicate that cannot safely be tracked.
+            guard date > Date(), defaults.object(forKey: key) == nil else { continue }
             let event = EKEvent(eventStore: store)
             event.calendar = calendar
             event.title = item["title"] as? String ?? "Grant reminder"
@@ -82,12 +104,12 @@ final class GrantCalendarBridge {
             event.addAlarm(EKAlarm(relativeOffset: -86400))
             do {
                 try store.save(event, span: .thisEvent, commit: true)
-                defaults.set(true, forKey: key)
+                defaults.set(event.eventIdentifier, forKey: key)
                 added += 1
             } catch {
                 result(FlutterError(code: "CALENDAR", message: error.localizedDescription, details: nil)); return
             }
         }
-        result(added > 0 ? "Added \(added) calendar reminder(s)." : "Calendar connected; no new future dated opportunities.")
+        result(added > 0 || removed > 0 ? "Added \(added) and removed \(removed) expired reminder(s)." : "Calendar connected; no new or expired app reminders to update.")
     }
 }
