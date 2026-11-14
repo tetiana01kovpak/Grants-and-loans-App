@@ -21,7 +21,7 @@ final allOpportunities = <Opportunity>[
       'A legal entity headquartered in the EU, EFTA or UK must submit. Incorporated companies must have at least 50% of equity held in those regions. Other exclusions apply.',
       'Submit the online form and mandatory Declaration of Honour. Support claims with scientific data or clearly labelled estimates; review all challenge documents.',
       'https://www.vinnova.se/en/calls-for-proposals/radikal-innovation/the-baltic-marine-watchdog-challenge/',
-      calendarDate: DateTime(2026, 12, 2, 9)),
+      calendarDate: DateTime.utc(2026, 12, 2, 13)),
   Opportunity('EIC STEP Scale Up', 'EU · Deep tech / AI',
       'Upcoming evaluation batch: 25 November 2026',
       '€10–30 million equity investment; this is not a grant.',
@@ -29,7 +29,7 @@ final allOpportunities = <Opportunity>[
       'Eligible European startups, SMEs and small mid-caps; significant scale-up financing needs. Check the call for all conditions.',
       'The 2026 call requires a business plan (maximum 50 pages), pitch deck (maximum 15 pages), qualified investor pre-commitment using the official template, financial plan, freedom-to-operate analysis and CVs. Check the official call for details and updates.',
       'https://eic.ec.europa.eu/eic-funding-opportunities/step-scale_en',
-      calendarDate: DateTime(2026, 11, 25, 9)),
+      calendarDate: DateTime.utc(2026, 11, 25, 9)),
   const Opportunity('SEAS — blue economy SMEs', 'Croatia / Italy · Maritime',
       'First cut-off passed on 9 November 2026; further cut-offs are conditional and unconfirmed.',
       '€80,000–125,000 per project, up to 80% of eligible costs.',
@@ -58,13 +58,14 @@ final allOpportunities = <Opportunity>[
       'Collaborative defence research with specific consortium, eligibility, control and security conditions. Review the current topic rules.',
       'Expect a consortium proposal, technical work plan, partner and ownership information, budget, declarations and security documentation as applicable. Use the official call templates.',
       'https://defence-industry-space.ec.europa.eu/document/download/2cd25753-d14f-4019-8fdf-68cca55b7f17_en?filename=EDF%202026%20Call%20Topic%20Descriptions.pdf'),
-  const Opportunity('EIC Accelerator', 'EU · Deep tech',
+  Opportunity('EIC Accelerator', 'EU · Deep tech',
       '2027: next full-proposal batch 20 January. Check short-proposal availability.',
       'Grant component below €2.5 million and investment may be available, subject to conditions.',
       'High-impact, breakthrough innovations, including AI and marine technologies where eligible.',
       'Eligible startups and SMEs; grant activities generally cover TRL 6–8. A successful short proposal precedes the full proposal.',
       'Prepare a short proposal, pitch deck, video and, if invited, a full business plan and supporting financial and technical evidence. Follow the applicable year’s templates.',
-      'https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en'),
+      'https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en',
+      calendarDate: DateTime.utc(2027, 1, 20, 16)),
   Opportunity('EIC Pre-Accelerator 2027', 'EU · Early-stage deep tech',
       'Upcoming: opens 5 May 2027; deadline 18 November 2027.',
       '€500,000–€1 million grant in 2027; up to 70% of eligible costs.',
@@ -72,7 +73,7 @@ final allOpportunities = <Opportunity>[
       'Single eligible company established in a widening country, including Croatia. Technology must be validated in the lab and have an adequate IP position.',
       'Submit through the EU Funding and Tenders Portal once the 2027 call opens; new templates will be published with the call.',
       'https://eic.ec.europa.eu/eic-funding-opportunities/eic-pre-accelerator_en',
-      calendarDate: DateTime(2027, 11, 17, 9)),
+      calendarDate: DateTime.utc(2027, 11, 18, 9)),
 ];
 
 // Only show verified future cutoffs or published upcoming calls. Where the
@@ -149,7 +150,7 @@ Future<void> main() async {
 }
 
 List<Map<String, Object>> calendarItems() => opportunities.where((o) => o.calendarDate != null)
-    .map((o) => {'id': o.title, 'title': o.title, 'description': '${o.status}\nCheck the official source: ${o.url}\nThis calendar time is a reminder, not the official closing time.', 'time': o.calendarDate!.millisecondsSinceEpoch}).toList();
+    .map((o) => {'id': o.title, 'title': o.title, 'description': '${o.status}\nCheck the official source: ${o.url}\nThis calendar time is a reminder; verify the official closing time.', 'time': o.calendarDate!.millisecondsSinceEpoch}).toList();
 
 String escapeCalendarText(String value) => value.replaceAll('\\', r'\\').replaceAll('\n', r'\n').replaceAll(';', r'\;').replaceAll(',', r'\,');
 String foldCalendarLine(String line) {
@@ -182,7 +183,10 @@ Future<bool> openWindowsCalendar() async {
     buffer.write('DTSTART:${utcCalendarTime(date)}\r\nDTEND:${utcCalendarTime(date.add(const Duration(hours: 1)))}\r\n');
     buffer.write(foldCalendarLine('SUMMARY:${escapeCalendarText(o.title)}'));
     buffer.write(foldCalendarLine('DESCRIPTION:${escapeCalendarText('${o.status}\nOfficial source: ${o.url}\nThis is a reminder time, not the official closing time.')}'));
-    buffer.write('BEGIN:VALARM\r\nTRIGGER:-P1D\r\nACTION:DISPLAY\r\nDESCRIPTION:Grant deadline reminder\r\nEND:VALARM\r\nEND:VEVENT\r\n');
+    for (final days in [30, 21]) {
+      buffer.write('BEGIN:VALARM\r\nTRIGGER:-P${days}D\r\nACTION:DISPLAY\r\nDESCRIPTION:Grant deadline reminder\r\nEND:VALARM\r\n');
+    }
+    buffer.write('END:VEVENT\r\n');
   }
   buffer.write('END:VCALENDAR\r\n');
   final file = File('${Directory.systemTemp.path}${Platform.pathSeparator}grant-compass-reminders.ics');
@@ -238,7 +242,7 @@ class _HomeState extends State<Home> {
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Research snapshot checked 14 November 2026. Past cutoffs are hidden automatically; new calls and changes are not fetched. Upcoming calls are labelled. Verify the official source.'))),
       const SizedBox(height: 8),
       FilledButton.icon(onPressed: enableCalendar, icon: const Icon(Icons.calendar_month), label: Text(Platform.isWindows ? 'Import calendar reminders' : 'Connect calendar')),
-      Text(Platform.isWindows ? 'Open a calendar file and import or save the reminders in your calendar app. This does not automatically update your calendar.' : 'With permission, the app adds future reminders and removes its own identifiable expired reminders when opened or connected. Apple devices need full calendar access. Older or edited reminders may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
+      Text(Platform.isWindows ? 'Import the calendar file to add 30-day and 21-day alerts. Previous imports are not updated automatically.' : 'The app sets alerts 30 and 21 days before each listed deadline or batch. Past alert times cannot notify retroactively. Apple needs full calendar access. Older or edited events may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 16),
       TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), border: OutlineInputBorder(), labelText: 'Search opportunities'), onChanged: (v) => setState(() => query = v)),
       const SizedBox(height: 12),

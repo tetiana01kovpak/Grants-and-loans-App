@@ -103,7 +103,38 @@ class MainActivity: FlutterActivity() {
         for (item in items) {
             val key = item["id"] as? String ?: continue
             val time = (item["time"] as? Number)?.toLong() ?: continue
-            if (time <= System.currentTimeMillis() || prefs.contains("event:$key")) continue
+            if (time <= System.currentTimeMillis()) continue
+            if (prefs.contains("event:$key")) {
+                val savedId = prefs.getLong("event:$key", -1)
+                val uri = android.content.ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, savedId)
+                val cursor = resolver.query(uri, arrayOf(CalendarContract.Events.TITLE, CalendarContract.Events.DESCRIPTION), null, null, null)
+                if (cursor == null) continue
+                var found = false
+                var owned = false
+                cursor.use {
+                    if (it.moveToFirst()) {
+                        found = true
+                        val description = it.getString(1) ?: ""
+                        owned = it.getString(0) == key && description.contains("Check the official source:") && description.contains("This calendar time is a reminder")
+                    }
+                }
+                if (!found) prefs.edit().remove("event:$key").apply()
+                else {
+                    if (owned) {
+                        val updated = ContentValues().apply {
+                            put(CalendarContract.Events.DESCRIPTION, item["description"] as? String)
+                            put(CalendarContract.Events.DTSTART, time)
+                            put(CalendarContract.Events.DTEND, time + 3600000L)
+                        }
+                        resolver.update(uri, updated, null, null)
+                        resolver.delete(CalendarContract.Reminders.CONTENT_URI,
+                            "${CalendarContract.Reminders.EVENT_ID} = ? AND ${CalendarContract.Reminders.METHOD} = ? AND ${CalendarContract.Reminders.MINUTES} IN (?, ?, ?)",
+                            arrayOf(savedId.toString(), CalendarContract.Reminders.METHOD_ALERT.toString(), "1440", "43200", "30240"))
+                        addReminders(savedId)
+                    }
+                    continue
+                }
+            }
             val values = ContentValues().apply {
                 put(CalendarContract.Events.CALENDAR_ID, id)
                 put(CalendarContract.Events.TITLE, item["title"] as? String)
@@ -115,16 +146,22 @@ class MainActivity: FlutterActivity() {
             }
             val event = resolver.insert(CalendarContract.Events.CONTENT_URI, values) ?: continue
             val eventId = event.lastPathSegment?.toLongOrNull() ?: continue
-            val reminder = ContentValues().apply {
-                put(CalendarContract.Reminders.EVENT_ID, eventId)
-                put(CalendarContract.Reminders.MINUTES, 1440)
-                put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
-            }
-            try { resolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder) }
+            try { addReminders(eventId) }
             catch (e: Exception) { resolver.delete(event, null, null); throw e }
             prefs.edit().putLong("event:$key", eventId).apply()
             added++
         }
         return if (added > 0 || removed > 0) "Added $added and removed $removed expired reminder(s)." else "Calendar connected; no new or expired app reminders to update."
+    }
+    private fun addReminders(eventId: Long) {
+        for (days in listOf(30, 21)) {
+            val reminder = ContentValues().apply {
+                put(CalendarContract.Reminders.EVENT_ID, eventId)
+                put(CalendarContract.Reminders.MINUTES, days * 24 * 60)
+                put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
+            }
+            contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder)
+                ?: throw IllegalStateException("Could not add calendar reminder")
+        }
     }
 }

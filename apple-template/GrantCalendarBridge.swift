@@ -92,6 +92,23 @@ final class GrantCalendarBridge {
             guard let id = item["id"] as? String, let milliseconds = item["time"] as? NSNumber else { continue }
             let date = Date(timeIntervalSince1970: milliseconds.doubleValue / 1000)
             let key = "grantEvent:" + id
+            if let identifier = defaults.object(forKey: key) as? String, let existing = store.event(withIdentifier: identifier) {
+                let notes = existing.notes ?? ""
+                if existing.title == id && notes.contains("Check the official source:") && notes.contains("This calendar time is a reminder") && date > Date() {
+                    existing.startDate = date
+                    existing.endDate = date.addingTimeInterval(3600)
+                    existing.notes = item["description"] as? String
+                    for alarm in existing.alarms ?? [] where [-86400.0, -2592000.0, -1814400.0].contains(alarm.relativeOffset) {
+                        existing.removeAlarm(alarm)
+                    }
+                    existing.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
+                    existing.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
+                    do { try store.save(existing, span: .thisEvent, commit: true) }
+                    catch { result(FlutterError(code: "CALENDAR", message: error.localizedDescription, details: nil)); return }
+                }
+                continue
+            }
+            if defaults.object(forKey: key) is String { defaults.removeObject(forKey: key) }
             // Older versions stored a boolean rather than an event identifier.
             // Keep it to avoid adding a duplicate that cannot safely be tracked.
             guard date > Date(), defaults.object(forKey: key) == nil else { continue }
@@ -101,7 +118,8 @@ final class GrantCalendarBridge {
             event.notes = item["description"] as? String
             event.startDate = date
             event.endDate = date.addingTimeInterval(3600)
-            event.addAlarm(EKAlarm(relativeOffset: -86400))
+            event.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
+            event.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
             do {
                 try store.save(event, span: .thisEvent, commit: true)
                 defaults.set(event.eventIdentifier, forKey: key)
