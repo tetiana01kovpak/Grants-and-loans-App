@@ -63,6 +63,36 @@ class MainActivity: FlutterActivity() {
     }
     private fun sync(items: List<Map<String, Any>>): String {
         val resolver = contentResolver
+        val activeKeys = items.mapNotNull { it["id"] as? String }.toSet()
+        var removed = 0
+        // Only inspect IDs recorded by this installation. Verify the event's
+        // identifying content and time before deleting; users may edit events.
+        for ((prefKey, value) in prefs.all) {
+            if (!prefKey.startsWith("event:") || value !is Long) continue
+            val key = prefKey.removePrefix("event:")
+            if (key in activeKeys) continue
+            val uri = android.content.ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, value)
+            val event = resolver.query(uri, arrayOf(CalendarContract.Events.TITLE,
+                CalendarContract.Events.DESCRIPTION, CalendarContract.Events.DTSTART), null, null, null)
+            if (event == null) continue
+            var missing = false
+            var ownedAndPast = false
+            event.use { cursor ->
+                if (!cursor.moveToFirst()) missing = true
+                else {
+                    val title = cursor.getString(0)
+                    val description = cursor.getString(1) ?: ""
+                    val start = cursor.getLong(2)
+                    ownedAndPast = title == key && description.contains("Check the official source:") &&
+                        description.contains("This calendar time is a reminder") && start < System.currentTimeMillis()
+                }
+            }
+            if (missing) prefs.edit().remove(prefKey).apply()
+            else if (ownedAndPast && resolver.delete(uri, null, null) > 0) {
+                prefs.edit().remove(prefKey).apply()
+                removed++
+            }
+        }
         val calendars = CalendarContract.Calendars.CONTENT_URI
         val id = resolver.query(calendars, arrayOf(CalendarContract.Calendars._ID),
             "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ? AND ${CalendarContract.Calendars.VISIBLE} = 1",
@@ -95,6 +125,6 @@ class MainActivity: FlutterActivity() {
             prefs.edit().putLong("event:$key", eventId).apply()
             added++
         }
-        return if (added > 0) "Added $added calendar reminder(s)." else "Calendar connected; no new future dated opportunities."
+        return if (added > 0 || removed > 0) "Added $added and removed $removed expired reminder(s)." else "Calendar connected; no new or expired app reminders to update."
     }
 }

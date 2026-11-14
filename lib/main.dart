@@ -238,7 +238,7 @@ class _HomeState extends State<Home> {
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Research snapshot checked 14 November 2026. Past cutoffs are hidden automatically; new calls and changes are not fetched. Upcoming calls are labelled. Verify the official source.'))),
       const SizedBox(height: 8),
       FilledButton.icon(onPressed: enableCalendar, icon: const Icon(Icons.calendar_month), label: Text(Platform.isWindows ? 'Import calendar reminders' : 'Connect calendar')),
-      Text(Platform.isWindows ? 'Open a calendar file and import or save the reminders in your calendar app. This does not automatically update your calendar.' : 'With your permission, future built-in dates are added to a writable calendar with a one-day reminder. The app checks its built-in dates when opened; it does not fetch new calls.', style: const TextStyle(fontSize: 12)),
+      Text(Platform.isWindows ? 'Open a calendar file and import or save the reminders in your calendar app. This does not automatically update your calendar.' : Platform.isAndroid ? 'With permission, the app adds future reminders and removes its own expired reminders when opened or connected. It does not fetch new calls.' : 'With permission, future built-in dates are added to a writable calendar with a one-day reminder. Remove past reminders manually; the app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 16),
       TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), border: OutlineInputBorder(), labelText: 'Search opportunities'), onChanged: (v) => setState(() => query = v)),
       const SizedBox(height: 12),
