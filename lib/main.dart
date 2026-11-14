@@ -183,7 +183,7 @@ Future<bool> openWindowsCalendar() async {
     buffer.write('DTSTART:${utcCalendarTime(date)}\r\nDTEND:${utcCalendarTime(date.add(const Duration(hours: 1)))}\r\n');
     buffer.write(foldCalendarLine('SUMMARY:${escapeCalendarText(o.title)}'));
     buffer.write(foldCalendarLine('DESCRIPTION:${escapeCalendarText('${o.status}\nOfficial source: ${o.url}\nThis is a reminder time, not the official closing time.')}'));
-    for (final days in [30, 21]) {
+    for (final days in [30, 21, 14]) {
       buffer.write('BEGIN:VALARM\r\nTRIGGER:-P${days}D\r\nACTION:DISPLAY\r\nDESCRIPTION:Grant deadline reminder\r\nEND:VALARM\r\n');
     }
     buffer.write('END:VEVENT\r\n');
@@ -242,7 +242,7 @@ class _HomeState extends State<Home> {
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Research snapshot checked 14 November 2026. Past cutoffs are hidden automatically; new calls and changes are not fetched. Upcoming calls are labelled. Verify the official source.'))),
       const SizedBox(height: 8),
       FilledButton.icon(onPressed: enableCalendar, icon: const Icon(Icons.calendar_month), label: Text(Platform.isWindows ? 'Import calendar reminders' : 'Connect calendar')),
-      Text(Platform.isWindows ? 'Import the calendar file to add 30-day and 21-day alerts. Previous imports are not updated automatically.' : 'The app sets alerts 30 and 21 days before each listed deadline or batch. Past alert times cannot notify retroactively. Apple needs full calendar access. Older or edited events may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
+      Text(Platform.isWindows ? 'Import the calendar file to add 30-day, 21-day and 14-day alerts. Previous imports are not updated automatically.' : 'The app sets alerts 30, 21 and 14 days before each listed deadline or batch. Past alert times cannot notify retroactively. Apple needs full calendar access. Older or edited events may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 16),
       TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), border: OutlineInputBorder(), labelText: 'Search opportunities'), onChanged: (v) => setState(() => query = v)),
       const SizedBox(height: 12),

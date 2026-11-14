@@ -128,8 +128,8 @@ class MainActivity: FlutterActivity() {
                         }
                         resolver.update(uri, updated, null, null)
                         resolver.delete(CalendarContract.Reminders.CONTENT_URI,
-                            "${CalendarContract.Reminders.EVENT_ID} = ? AND ${CalendarContract.Reminders.METHOD} = ? AND ${CalendarContract.Reminders.MINUTES} IN (?, ?, ?)",
-                            arrayOf(savedId.toString(), CalendarContract.Reminders.METHOD_ALERT.toString(), "1440", "43200", "30240"))
+                            "${CalendarContract.Reminders.EVENT_ID} = ? AND ${CalendarContract.Reminders.METHOD} = ? AND ${CalendarContract.Reminders.MINUTES} IN (?, ?, ?, ?)",
+                            arrayOf(savedId.toString(), CalendarContract.Reminders.METHOD_ALERT.toString(), "1440", "43200", "30240", "20160"))
                         addReminders(savedId)
                     }
                     continue
@@ -154,7 +154,7 @@ class MainActivity: FlutterActivity() {
         return if (added > 0 || removed > 0) "Added $added and removed $removed expired reminder(s)." else "Calendar connected; no new or expired app reminders to update."
     }
     private fun addReminders(eventId: Long) {
-        for (days in listOf(30, 21)) {
+        for (days in listOf(30, 21, 14)) {
             val reminder = ContentValues().apply {
                 put(CalendarContract.Reminders.EVENT_ID, eventId)
                 put(CalendarContract.Reminders.MINUTES, days * 24 * 60)

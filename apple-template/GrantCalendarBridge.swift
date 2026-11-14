@@ -98,11 +98,12 @@ final class GrantCalendarBridge {
                     existing.startDate = date
                     existing.endDate = date.addingTimeInterval(3600)
                     existing.notes = item["description"] as? String
-                    for alarm in existing.alarms ?? [] where [-86400.0, -2592000.0, -1814400.0].contains(alarm.relativeOffset) {
+                    for alarm in existing.alarms ?? [] where [-86400.0, -2592000.0, -1814400.0, -1209600.0].contains(alarm.relativeOffset) {
                         existing.removeAlarm(alarm)
                     }
                     existing.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
                     existing.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
+                    existing.addAlarm(EKAlarm(relativeOffset: -14 * 86400))
                     do { try store.save(existing, span: .thisEvent, commit: true) }
                     catch { result(FlutterError(code: "CALENDAR", message: error.localizedDescription, details: nil)); return }
                 }
@@ -120,6 +121,7 @@ final class GrantCalendarBridge {
             event.endDate = date.addingTimeInterval(3600)
             event.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
             event.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
+            event.addAlarm(EKAlarm(relativeOffset: -14 * 86400))
             do {
                 try store.save(event, span: .thisEvent, commit: true)
                 defaults.set(event.eventIdentifier, forKey: key)
