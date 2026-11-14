@@ -1,0 +1,14 @@
+I saved the complete step-by-step guide here:
+
+Open the Android phone testing guide (/D:/Grants and loans/ANDROID-TEST-GUIDE.md)
+
+The process has four main parts:
+
+1. Install Flutter and Android Studio on your Windows computer, then use Android Studio to install the Android SDK tools.
+2. Build the test APK from the project in D:\Grants and loans. The guide includes the commands and the calendar permissions that must be added.
+3. Connect your phone by USB, turn on Developer options and USB debugging, and allow the computer when the phone asks. Then install the test app.
+4. Connect your calendar: open Grant Compass, tap Connect calendar, and allow calendar access. The app will try to add future grant dates to the first visible writable calendar on your phone.
+
+To check the connection, open your phone’s calendar and look for the grant events listed in the guide. If their dates have already passed, the app’s grant data must be updated before it can add a new reminder.
+
+The APK hasn’t been built yet, and the calendar feature hasn’t been tested. If you reach an error, tell me the step number and the exact message, and I can help you fix it. The official Flutter guide also explains how to connect an Android device.
