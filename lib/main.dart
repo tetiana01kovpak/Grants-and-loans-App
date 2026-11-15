@@ -115,10 +115,21 @@ class LoanOpportunity {
   const LoanOpportunity(this.title, this.tag, this.status, this.amount, this.rate, this.eligibility, this.purpose, this.url);
   final String title, tag, status, amount, rate, eligibility, purpose, url;
 }
-List<Opportunity> get opportunities => allOpportunities.where((o) {
+List<Opportunity> opportunitiesAt(DateTime now) => allOpportunities.where((o) {
   final cutoff = cutoffUtc[o.title];
-  return cutoff != null && DateTime.now().toUtc().isBefore(cutoff);
+  return cutoff != null && now.toUtc().isBefore(cutoff);
 }).toList();
+List<Opportunity> get opportunities => opportunitiesAt(DateTime.now());
+
+Future<void> openLink(BuildContext context, String url) async {
+  try {
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) { await bridge.invokeMethod('openUrl', url); }
+    else if (Platform.isWindows) { await Process.start('rundll32.exe', ['url.dll,FileProtocolHandler', url]); }
+    else { throw UnsupportedError('Opening links is not supported on this platform.'); }
+  } catch (_) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open link')));
+  }
+}
 
 class FundingFacts {
   const FundingFacts({required this.amount, required this.share, required this.upfront,
@@ -302,12 +313,7 @@ class LoanCard extends StatelessWidget {
       Align(alignment: Alignment.centerLeft, child: Text(loan.tag, style: Theme.of(context).textTheme.labelLarge)),
       const SizedBox(height: 8),
       _loanRow('Interest / contribution', loan.rate), _loanRow('Who may qualify', loan.eligibility), _loanRow('Potential use', loan.purpose),
-      Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: () async {
-        try {
-          if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) { await bridge.invokeMethod('openUrl', loan.url); }
-          else if (Platform.isWindows) { await Process.start('rundll32.exe', ['url.dll,FileProtocolHandler', loan.url]); }
-        } catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open link'))); }
-      }, icon: const Icon(Icons.open_in_new), label: const Text('Official details'))),
+      Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: () => openLink(context, loan.url), icon: const Icon(Icons.open_in_new), label: const Text('Official details'))),
     ]));
   Widget _loanRow(String title, String value) => Padding(padding: const EdgeInsets.only(top: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.bold)), Text(value)]));
 }
@@ -356,15 +362,7 @@ class Detail extends StatelessWidget {
     Card(child: Column(children: [factRow(Icons.groups_outlined, 'Employees', f.employees), factRow(Icons.handshake_outlined, 'Partners', f.partners), factRow(Icons.trending_up, 'Sales', f.sales), factRow(Icons.description_outlined, 'Letters / commitments', f.letters)])),
     section('Who can apply', o.eligibility), section('Application documents', f.documents), section('Potential fit', o.fit),
     const SizedBox(height: 18), Text('Source checked: ${f.checked}. Unverified means the rule has not been confirmed, not that no requirement exists.', style: Theme.of(context).textTheme.bodySmall),
-    const SizedBox(height: 20), FilledButton.icon(onPressed: () async {
-      try {
-        if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) { await bridge.invokeMethod('openUrl', o.url); }
-        else if (Platform.isWindows) { await Process.start('rundll32.exe', ['url.dll,FileProtocolHandler', o.url]); }
-        else { throw UnsupportedError('Opening links is not supported on this platform.'); }
-      } catch (_) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open link')));
-      }
-    }, icon: const Icon(Icons.open_in_new), label: const Text('Open official source')),
+    const SizedBox(height: 20), FilledButton.icon(onPressed: () => openLink(context, o.url), icon: const Icon(Icons.open_in_new), label: const Text('Open official source')),
   ]))));
   }
   Widget factRow(IconData icon, String label, String value) => Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 3), Text(value)]))]));
