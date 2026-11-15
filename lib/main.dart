@@ -140,8 +140,14 @@ Future<void> openLink(BuildContext context, String url) async {
 class FundingFacts {
   const FundingFacts({required this.amount, required this.share, required this.upfront,
     required this.employees, required this.partners, required this.sales,
-    required this.letters, required this.documents, required this.note, required this.checked});
+    required this.letters, required this.documents, required this.note, required this.checked,
+    this.fundedPercent, this.ownPercent, this.fundedLabel = 'Grant covers', this.splitNote = '',
+    this.documentList = const [], this.stages = const [], this.rules = const []});
   final String amount, share, upfront, employees, partners, sales, letters, documents, note, checked;
+  // Share of eligible costs paid by the funder vs. by the applicant (null = not verified).
+  final int? fundedPercent, ownPercent;
+  final String fundedLabel, splitNote;
+  final List<String> documentList, stages, rules;
 }
 
 const unknown = 'Not verified — check call documents';
@@ -152,20 +158,39 @@ const facts = <String, FundingFacts>{
     employees: 'No minimum FTE specified in call; confirm', partners: 'No minimum partner count specified; legal-entity applicant required',
     sales: 'No minimum sales specified in call; confirm', letters: 'No letter of intent identified; confirm submission form',
     documents: 'Online submission and Declaration of Honour required. Evidence or clearly labelled estimates; work plan, team and cost estimate.',
-    note: 'Fixed-price R&D procurement: Stage 1 up to €170k, Stage 2 up to €350k. Stage 1: 50% at start, 40% after two months, 10% after final report. Costs above agreed price are your risk. Mandatory Baltic demonstration at end of Stage 1.', checked: '14 Nov 2026 · Vinnova call and participation agreement'),
+    note: 'Fixed-price R&D procurement: Stage 1 up to €170k, Stage 2 up to €350k. Stage 1: 50% at start, 40% after two months, 10% after final report. Costs above agreed price are your risk. Mandatory Baltic demonstration at end of Stage 1.', checked: '14 Nov 2026 · Vinnova call and participation agreement',
+    fundedPercent: 100, ownPercent: 0, fundedLabel: 'Contract price paid by buyer',
+    splitNote: 'Pre-commercial procurement: the buyer pays the agreed fixed price. No co-financing is required, but any costs above the agreed price are your own risk.',
+    documentList: ['Online submission form', 'Signed Declaration of Honour (mandatory)', 'Technical solution description with scientific data or clearly labelled estimates',
+      'Work plan for Stage 1', 'Team description and key people', 'Cost estimate / fixed price offer', 'Company registration and ownership details (to prove EU/EFTA/UK headquarters and equity)'],
+    stages: ['Submit by 2 December 2026, 14:00 Swedish time', 'Evaluation and selection of teams', 'Stage 1: development, up to €170k (paid 50% at start, 40% after two months, 10% after final report)',
+      'Mandatory demonstration in the Baltic Sea at the end of Stage 1', 'Stage 2: further development for selected teams, up to €350k'],
+    rules: ['Applicant must be a legal entity headquartered in the EU, EFTA or UK', 'Incorporated companies need at least 50% of equity held in those regions',
+      'Fixed price per stage; overruns are not reimbursed', 'Must address autonomous maritime surveillance and safe navigation, not only one sub-function',
+      'Other exclusions apply; read all challenge documents']),
   'EIC STEP Scale Up': FundingFacts(
     amount: '€10m–€30m investment (2026)', share: 'Investor capital required; not a grant',
     upfront: 'Investment timing subject to due diligence and agreement', employees: 'Startups, SMEs or small mid-caps; check size definition',
     partners: 'A single qualified investor must pre-commit', sales: 'No minimum sales verified',
     letters: 'Investor pre-commitment in official template: at least 20% of target round',
     documents: 'Business plan, pitch deck, investor pre-commitment, financial plan, freedom-to-operate analysis and key personnel CVs; check call.',
-    note: '2026 target round: €50m–€150m and 3–5 times the EIC investment. Verify the rules for the applicable year.', checked: '14 Nov 2026 · EIC 2026 programme'),
+    note: '2026 target round: €50m–€150m and 3–5 times the EIC investment. Verify the rules for the applicable year.', checked: '15 Nov 2026 · EIC STEP Scale Up page',
+    fundedLabel: 'EIC share of funding round',
+    splitNote: 'Not a grant: the EIC invests equity of €10m–€30m. The total round must be 3–5 times the EIC investment, so the EIC provides roughly 20–33% and other investors the remaining 67–80%. One qualified investor must pre-commit at least 20% of the round.',
+    documentList: ['Full business plan (max 50 pages) incl. ownership and financial structure', 'Pitch deck (max 15 pages, PDF)',
+      'Equity pre-commitment from one qualified investor (official template)', 'Financial plan (EIC template)',
+      'Freedom-to-operate results or a note of max 2 pages (a simple statement if not relevant, e.g. software)', 'CVs of key personnel'],
+    stages: ['Submit on the EU Funding & Tenders Portal (open anytime; next evaluation batch 25 November 2026)', 'Evaluation; invitation to interview about 4–6 weeks after evaluation starts',
+      'Interview with a jury of up to six members; results within about 2 weeks', 'Due diligence and investment agreement with the EIC Fund'],
+    rules: ['Single SME or small mid-cap with fewer than 500 employees', 'Established in an EU Member State or eligible Associated Country (not the UK)',
+      'Digital/deep tech, clean tech or biotech scope', 'Equity only, managed by the EIC Fund', 'An investor may apply on behalf of an eligible company']),
   'SEAS — blue economy SMEs': FundingFacts(
     amount: 'Up to €125k / project', share: 'At least 20% of eligible costs; EU covers up to 80%',
     upfront: 'Payment schedule not verified', employees: 'Micro, small or medium-sized enterprise or startup; verify SME criteria',
     partners: 'At least 1 Croatian + 1 Italian entrepreneur; maximum 3', sales: 'Minimum sales not verified',
     letters: 'Partner letters / commitments: check guidelines', documents: 'Joint proposal, partner details and budget; confirm required forms in official guidelines.',
-    note: 'Registration in an eligible Croatia–Italy programme area is required. Funding rate and other contributions can vary; verify call terms and any further cut-off.', checked: '14 Nov 2026 · SEAS call announcement'),
+    note: 'Registration in an eligible Croatia–Italy programme area is required. Funding rate and other contributions can vary; verify call terms and any further cut-off.', checked: '14 Nov 2026 · SEAS call announcement',
+    fundedPercent: 80, ownPercent: 20),
   'Process innovation in S3 areas': FundingFacts(
     amount: 'Check official call', share: unknown, upfront: unknown, employees: unknown, partners: unknown, sales: unknown, letters: unknown,
     documents: 'Check current application package and amendments.', note: 'Eligibility, open status and financing must be confirmed with HAMAG-BICRO.', checked: 'Listing not independently verified'),
@@ -181,12 +206,30 @@ const facts = <String, FundingFacts>{
     upfront: 'Payment timing depends on agreement; verify', employees: 'SME; small mid-cap eligibility is restricted',
     partners: 'Single applicant can apply; investment terms vary', sales: 'No minimum sales verified',
     letters: 'Investor letters: verify applicable funding route', documents: 'Short proposal, pitch deck and video; full proposal if invited. Verify 2027 templates.',
-    note: '2027 grant supports eligible innovation activities; the 30% applies to the grant work packages, not the separate investment component.', checked: '14 Nov 2026 · EIC 2027 work programme'),
+    note: '2027 grant supports eligible innovation activities; the 30% applies to the grant work packages, not the separate investment component.', checked: '15 Nov 2026 · EIC Accelerator page and 2027 work programme',
+    fundedPercent: 70, ownPercent: 30,
+    splitNote: 'The grant (up to €2.5m) pays 70% of eligible innovation costs; you fund 30%. An optional EIC equity investment of €1m–€10m is separate and not part of this split.',
+    documentList: ['Step 1 – short proposal form (about 12 pages: innovation, market, team)', 'Step 1 – pitch deck (max 10 slides, PDF)', 'Step 1 – video pitch (max 3 minutes, up to 3 core team members)',
+      'Step 2 – full proposal form (up to 20 pages)', 'Step 2 – updated pitch deck and video', 'Step 2 – financial data and company structure (cap table)',
+      'Step 2 – IP strategy, incl. freedom-to-operate analysis if available', 'Step 2 – implementation plan with milestones', 'Step 2 – lump-sum budget table'],
+    stages: ['Step 1: short proposal – submit any time; remote evaluation, answer in about 4–6 weeks', 'Step 2: full proposal (after a GO) – submit by a batch date: 20 Jan, 17 Mar, 1 Sep or 4 Nov 2027',
+      'Step 3: interview with the EIC Jury (invitation at least 2 weeks ahead; results 2–3 weeks later)', 'Step 4: grant agreement; EIC Fund due diligence if you also get investment'],
+    rules: ['SME established in an EU Member State or Associated Country (or a person/company intending to set one up)', 'Grant activities at TRL 6–8; investment at TRL 6–9',
+      'Grant-only support can be received only once under Horizon Europe', 'Small mid-caps (up to 499 employees) only for investment-only or exceptional blended finance',
+      'Score of 13/15 or more without funding gives a Seal of Excellence']),
   'EIC Pre-Accelerator 2027': FundingFacts(
     amount: '€500k–€1m grant', share: '30% of eligible costs from beneficiary resources', upfront: 'Payment schedule not verified',
     employees: 'SME criteria apply; verify size and linked companies', partners: 'Single applicant', sales: 'Minimum sales not verified',
     letters: 'Letters of intent: check 2027 call package', documents: '2027 application form will be published with the call; check the official portal.',
-    note: 'Upcoming call: opens 5 May 2027. Grant covers up to 70% of eligible costs. Lab-validated technology (at least TRL 4) and appropriate IP rights required.', checked: '14 Nov 2026 · EIC Pre-Accelerator and FAQ'),
+    note: 'Upcoming call: opens 5 May 2027. Grant covers up to 70% of eligible costs. Lab-validated technology (at least TRL 4) and appropriate IP rights required.', checked: '15 Nov 2026 · EIC Pre-Accelerator page',
+    fundedPercent: 70, ownPercent: 30,
+    splitNote: 'Lump-sum grant of €500k–€1m covering 70% of eligible costs; you fund the other 30%. Project lasts up to 2 years.',
+    documentList: ['2027 application form (published when the call opens on 5 May 2027)', 'Proof of TRL 4 or higher (lab validation evidence)',
+      'Evidence of IP rights / freedom to operate', 'Path-to-market plan with measurable KPIs', 'Company registration in a widening country (Croatia qualifies)'],
+    stages: ['Prepare using the WIDERA work programme and 2025 template', 'Call opens 5 May 2027', 'Submit on the EU Funding & Tenders Portal by 18 November 2027',
+      'Evaluation and grant agreement', 'Mid-project review; access to EIC Accelerator Fast Track'],
+    rules: ['Single SME or small mid-cap (one beneficiary)', 'Registered in a Horizon Europe widening country, eligible associated country or outermost region',
+      'Technology at least TRL 4 (validated in the lab)', 'Must hold the IP rights needed for freedom to operate', 'Clear path to market and commitment to scale up']),
 };
 
 Future<void> main() async {
@@ -368,6 +411,50 @@ class FactChip extends StatelessWidget {
     child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 16), const SizedBox(width: 6), Flexible(child: Text(text, style: Theme.of(context).textTheme.labelMedium))]));
 }
 
+class FundingSplit extends StatelessWidget {
+  const FundingSplit(this.f, {super.key});
+  final FundingFacts f;
+  @override Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final funded = f.fundedPercent, own = f.ownPercent;
+    return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (funded != null && own != null) ...[
+        ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(height: 22, child: Row(children: [
+          if (funded > 0) Expanded(flex: funded, child: Container(color: colors.primary)),
+          if (own > 0) Expanded(flex: own, child: Container(color: colors.tertiaryContainer)),
+        ]))),
+        const SizedBox(height: 10),
+        Row(children: [Icon(Icons.square, size: 14, color: colors.primary), const SizedBox(width: 6),
+          Expanded(child: Text('${f.fundedLabel}: $funded%', style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        const SizedBox(height: 4),
+        Row(children: [Icon(Icons.square, size: 14, color: colors.tertiaryContainer), const SizedBox(width: 6),
+          Expanded(child: Text('Your own budget: $own%', style: const TextStyle(fontWeight: FontWeight.bold)))]),
+        if (f.splitNote.isNotEmpty) const SizedBox(height: 10),
+      ],
+      if (f.splitNote.isNotEmpty) Text(f.splitNote)
+      else if (funded == null) Text('Percentage split not verified. ${f.share}'),
+    ])));
+  }
+}
+
+class DocumentChecklist extends StatefulWidget {
+  const DocumentChecklist(this.title, this.documents, {super.key});
+  final String title; final List<String> documents;
+  @override State<DocumentChecklist> createState() => _DocumentChecklistState();
+}
+class _DocumentChecklistState extends State<DocumentChecklist> {
+  final done = <int>{};
+  @override Widget build(BuildContext context) => Card(child: Column(children: [
+    Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Row(children: [
+      Expanded(child: LinearProgressIndicator(value: done.length / widget.documents.length)),
+      const SizedBox(width: 12), Text('${done.length} / ${widget.documents.length} ready'),
+    ])),
+    for (var i = 0; i < widget.documents.length; i++)
+      CheckboxListTile(value: done.contains(i), controlAffinity: ListTileControlAffinity.leading, title: Text(widget.documents[i]),
+        onChanged: (v) => setState(() => v == true ? done.add(i) : done.remove(i))),
+  ]));
+}
+
 class Detail extends StatelessWidget {
   const Detail(this.o, {super.key}); final Opportunity o;
   @override Widget build(BuildContext context) {
@@ -379,10 +466,28 @@ class Detail extends StatelessWidget {
     Text('Funding at a glance', style: Theme.of(context).textTheme.titleLarge),
     const SizedBox(height: 8),
     Card(child: Column(children: [factRow(Icons.account_balance_wallet_outlined, 'Funding', f.amount), factRow(Icons.pie_chart_outline, 'Your contribution', f.share), factRow(Icons.schedule, 'Upfront / timing', f.upfront)])),
+    const SizedBox(height: 20), Text('Who pays what', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
+    FundingSplit(f),
+    if (f.stages.isNotEmpty) ...[
+      const SizedBox(height: 20), Text('Stages', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
+      Card(child: Column(children: [for (var i = 0; i < f.stages.length; i++)
+        ListTile(leading: CircleAvatar(radius: 14, child: Text('${i + 1}', style: const TextStyle(fontSize: 13))), title: Text(f.stages[i]))])),
+    ],
+    if (f.rules.isNotEmpty) ...[
+      const SizedBox(height: 20), Text('Rules', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
+      Card(child: Column(children: [for (final rule in f.rules)
+        ListTile(dense: true, leading: const Icon(Icons.rule, size: 20), title: Text(rule))])),
+    ],
     section('Funding rules', f.note),
     const SizedBox(height: 20), Text('Requirements', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
     Card(child: Column(children: [factRow(Icons.groups_outlined, 'Employees', f.employees), factRow(Icons.handshake_outlined, 'Partners', f.partners), factRow(Icons.trending_up, 'Sales', f.sales), factRow(Icons.description_outlined, 'Letters / commitments', f.letters)])),
-    section('Who can apply', o.eligibility), section('Application documents', f.documents), section('Potential fit', o.fit),
+    section('Who can apply', o.eligibility),
+    if (f.documentList.isNotEmpty) ...[
+      const SizedBox(height: 20), Text('Documents you need', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 4),
+      Text('Tick each document as you prepare it. Always confirm the final list in the official call.', style: Theme.of(context).textTheme.bodySmall),
+      const SizedBox(height: 8), DocumentChecklist(o.title, f.documentList),
+    ] else section('Application documents', f.documents),
+    section('Potential fit', o.fit),
     const SizedBox(height: 18), Text('Source checked: ${f.checked}. Unverified means the rule has not been confirmed, not that no requirement exists.', style: Theme.of(context).textTheme.bodySmall),
     const SizedBox(height: 20), FilledButton.icon(onPressed: () => openLink(context, o.url), icon: const Icon(Icons.open_in_new), label: const Text('Open official source')),
   ]))));
