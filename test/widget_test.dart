@@ -21,9 +21,25 @@ void main() {
   testWidgets('app lists loans and opens a detail page', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 3000));
     await tester.pumpWidget(const GrantApp());
-    expect(find.text('HBOR loan for inventions'), findsOneWidget);
+    expect(find.text('HBOR loan for digital transition'), findsOneWidget);
     await tester.tap(find.text('EIC Accelerator'));
     await tester.pumpAndSettle();
     expect(find.text('Funding at a glance'), findsOneWidget);
+  });
+
+  test('each deadline gets separate 30/21/14-day reminder events', () {
+    final items = calendarItems();
+    for (final o in opportunities.where((o) => o.calendarDate != null)) {
+      final deadline = o.calendarDate!.millisecondsSinceEpoch;
+      final own = items.where((i) => (i['description'] as String).contains('Grant Compass ID: ${o.title}')).toList();
+      expect(own.length, 4);
+      expect(own.where((i) => i['alert'] == false).single['time'], deadline);
+      for (final days in [30, 21, 14]) {
+        final reminder = own.singleWhere((i) => i['id'] == '${o.title} | $days days');
+        expect(reminder['alert'], isTrue);
+        expect(reminder['title'], '$days days left: ${o.title}');
+        expect(reminder['time'], deadline - Duration(days: days).inMilliseconds);
+      }
+    }
   });
 }
