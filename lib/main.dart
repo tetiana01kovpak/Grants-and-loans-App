@@ -86,29 +86,35 @@ final cutoffUtc = <String, DateTime>{
 };
 final loans = <LoanOpportunity>[
   LoanOpportunity('HBOR loan for SME RDI and AI', 'Croatia · Innovation / AI',
-    'Open while NRRP funds remain', '€100,000–€1,000,000; startups up to €500,000',
+    'Open since 10 August 2026, while NRRP funds remain','€100,000–€1,000,000; startups up to €500,000',
     '2% fixed per year (may be higher under state-aid rules)',
     'Croatian micro, small or medium private-sector company doing RDI or developing, implementing or using AI. Up to 75% or 85% of eligible investment; own contribution required.',
     'Equipment, software, R&D and innovation investment; check eligible cost rules and exclusions.',
     'https://www.hbor.hr/investments-by-smes-in-rdi-and-ai-under-the-national-recovery-and-resilience-plan-nrrp/2727'),
   LoanOpportunity('HAMAG-BICRO Small Loans for Industrial Transition', 'Croatia · Regional value chains',
-    'Reopens 20 November 2026 at 08:00; funds are limited', 'See current programme terms',
-    'See current programme terms',
-    'Micro, small or medium company operating for over 3 years, headquartered and active in Panonian, Northern or Adriatic Croatia, and listed among mapped regional value-chain stakeholders.',
-    'Investment aligned with an eligible regional value chain. Confirm the company and project are mapped before applying.',
-    'https://hamagbicro.hr/financijski-instrumenti/kako-do-zajma/investicije/mali-zajmovi-za-industrijsku-tranziciju/'),
-  LoanOpportunity('HAMAG-BICRO Micro Loans for Growth and Inclusion', 'Croatia · Start-up / inclusion',
-    'Check current application availability', 'Up to €50,000',
-    'Verify current rate and possible principal write-off conditions',
-    'Micro and small businesses meeting the programme’s start-up or vulnerable-group criteria. Confirm ownership and age rules in the current terms.',
-    'Tangible or intangible assets and limited working capital; real estate and refinancing are excluded.',
-    'https://hamagbicro.hr/pitanja-i-odgovori/mikro-zajmovi-za-rast-i-ukljucenost/'),
-  LoanOpportunity('HBOR loan for inventions', 'Croatia · Prototype / IP',
-    'Check current programme terms', 'Loan amount subject to HBOR assessment',
-    'Confirm current rate and contribution with HBOR',
-    'Croatian SMEs with a certified prototype or technology and a patent/IP protection step, or qualifying development expenses after two years of operation.',
-    'Equipment and other fixed assets; working capital is generally capped at 30% of investment. HBOR may finance up to 85% of estimated investment value.',
-    'https://www.hbor.hr/en/kreditni_program/inventions'),
+    'Applications from 20 November 2026 at 08:00, until funds run out', '€25,001–€100,000',
+    '0.5%–1.5% fixed per year, depending on investment location; up to 10 years incl. up to 1 year grace; partial principal write-off possible',
+    'Micro, small or medium company operating for over 3 years, headquartered and active in Panonian, Northern or Adriatic Croatia (not City of Zagreb), and listed among mapped regional value-chain stakeholders.',
+    'Tangible and intangible assets aligned with an eligible regional value chain; working capital up to 30% of the loan.',
+    'https://hamagbicro.hr/ponovno-otvaranje-programa-mali-zajmovi-za-industrijsku-tranziciju-prijave-od-20-studenoga-2026/'),
+  LoanOpportunity('HAMAG-BICRO Micro Loan for Growth and Inclusion', 'Croatia · Start-up / inclusion',
+    'Open, applications online via HAMAG-BICRO', '€1,000–€50,000',
+    'Fixed: base rate minus 2.5 points, minimum 0.5% (currently 0.5%); up to 5 years incl. up to 1 year grace; up to 30% principal write-off for new hires',
+    'Micro and small businesses up to 3 years old whose majority owner is aged 18–29 or 55+, has a disability, or has no completed secondary education. You can apply before registering the business.',
+    'Tangible and intangible assets; working capital up to 30% of the loan. Agriculture, accommodation, transport, real estate and already-paid investments are excluded.',
+    'https://hamagbicro.hr/financijski-instrumenti/kako-do-zajma/investicije/mikro-zajam-za-rast-i-unljucenost/'),
+  LoanOpportunity('HBOR loan for young, women and start-up entrepreneurs', 'Croatia · Start-up / young / women',
+    'Open, programme in force from July 2026', 'Up to €400,000 (from €50,000 via bank, from €100,000 direct)',
+    'Via bank up to 3.00% fixed; direct HBOR 3.90% fixed (local subsidy can cut up to 2 points); up to 12 years incl. up to 3 years grace',
+    'Croatian micro, small or medium business that is majority-owned by people under 41, majority women-owned and woman-led, or under 3 years old; also investments in assisted areas or RDI commercialisation.',
+    'Starting or modernising a business, new technology, capacity, new products and jobs; working capital up to 30%. Bank loans up to 100% of investment, direct up to 85%.',
+    'https://www.hbor.hr/poduzetnistvo-mladih-zena-pocetnika-i-ostalih-posebnih-segmenata-394/394'),
+  LoanOpportunity('HBOR loan for digital transition', 'Croatia · Digital',
+    'Open, programme in force from 1 July 2026', 'From €50,000 via bank or €100,000 direct; no fixed maximum',
+    'Direct HBOR: 2.00% fixed up to €400,000, from 1.50% above; via bank max 3.50% fixed',
+    'Croatian private-sector company of any size (not a company in difficulty).',
+    'Fixed assets for strategic digital projects (100% digital coefficient under EU rules); working capital up to 30%. Up to 75%–100% of investment depending on state-aid rules.',
+    'https://www.hbor.hr/ulaganja-u-digitalnu-tranziciju/2652'),
 ];
 
 class LoanOpportunity {
@@ -191,8 +197,23 @@ Future<void> main() async {
   runApp(const GrantApp());
 }
 
-List<Map<String, Object>> calendarItems() => opportunities.where((o) => o.calendarDate != null)
-    .map((o) => {'id': o.title, 'title': o.title, 'description': '${o.status}\nCheck the official source: ${o.url}\nThis calendar time is a reminder; verify the official closing time.', 'time': o.calendarDate!.millisecondsSinceEpoch}).toList();
+// Each deadline becomes one deadline event (no alert) plus separate
+// "N days left" events that alert at their own start time. Separate events
+// work around Google Calendar's 4-week reminder limit and Outlook's
+// one-reminder-per-event limit.
+const reminderDays = [30, 21, 14];
+String calendarDescription(Opportunity o, String id) =>
+    '${o.status}\nCheck the official source: ${o.url}\nThis calendar time is a reminder; verify the official closing time.\nGrant Compass ID: $id';
+List<Map<String, Object>> calendarItems() => [
+  for (final o in opportunities.where((o) => o.calendarDate != null)) ...[
+    {'id': o.title, 'title': o.title, 'description': calendarDescription(o, o.title),
+      'time': o.calendarDate!.millisecondsSinceEpoch, 'alert': false},
+    for (final days in reminderDays)
+      {'id': '${o.title} | $days days', 'title': '$days days left: ${o.title}',
+        'description': calendarDescription(o, '${o.title} | $days days'),
+        'time': o.calendarDate!.subtract(Duration(days: days)).millisecondsSinceEpoch, 'alert': true},
+  ],
+];
 
 String escapeCalendarText(String value) => value.replaceAll('\\', r'\\').replaceAll('\n', r'\n').replaceAll(';', r'\;').replaceAll(',', r'\,');
 String foldCalendarLine(String line) {
@@ -214,19 +235,20 @@ String utcCalendarTime(DateTime value) {
 }
 
 Future<bool> openWindowsCalendar() async {
-  final upcoming = opportunities.where((o) => o.calendarDate != null && o.calendarDate!.isAfter(DateTime.now())).toList();
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final upcoming = calendarItems().where((item) => (item['time'] as int) > now).toList();
   if (upcoming.isEmpty) return false;
   final buffer = StringBuffer('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Grant Compass//Funding reminders//EN\r\nCALSCALE:GREGORIAN\r\n');
-  for (final o in upcoming) {
-    final date = o.calendarDate!;
+  for (final item in upcoming) {
+    final date = DateTime.fromMillisecondsSinceEpoch(item['time'] as int, isUtc: true);
     buffer.write('BEGIN:VEVENT\r\n');
-    buffer.write('UID:${Uri.encodeComponent(o.title)}-${date.millisecondsSinceEpoch}@grantcompass.local\r\n');
+    buffer.write('UID:${Uri.encodeComponent(item['id'] as String)}-${date.millisecondsSinceEpoch}@grantcompass.local\r\n');
     buffer.write('DTSTAMP:${utcCalendarTime(DateTime.now())}\r\n');
     buffer.write('DTSTART:${utcCalendarTime(date)}\r\nDTEND:${utcCalendarTime(date.add(const Duration(hours: 1)))}\r\n');
-    buffer.write(foldCalendarLine('SUMMARY:${escapeCalendarText(o.title)}'));
-    buffer.write(foldCalendarLine('DESCRIPTION:${escapeCalendarText('${o.status}\nOfficial source: ${o.url}\nThis is a reminder time, not the official closing time.')}'));
-    for (final days in [30, 21, 14]) {
-      buffer.write('BEGIN:VALARM\r\nTRIGGER:-P${days}D\r\nACTION:DISPLAY\r\nDESCRIPTION:Grant deadline reminder\r\nEND:VALARM\r\n');
+    buffer.write(foldCalendarLine('SUMMARY:${escapeCalendarText(item['title'] as String)}'));
+    buffer.write(foldCalendarLine('DESCRIPTION:${escapeCalendarText(item['description'] as String)}'));
+    if (item['alert'] == true) {
+      buffer.write('BEGIN:VALARM\r\nTRIGGER:-PT0M\r\nACTION:DISPLAY\r\nDESCRIPTION:Grant deadline reminder\r\nEND:VALARM\r\n');
     }
     buffer.write('END:VEVENT\r\n');
   }
@@ -284,7 +306,7 @@ class _HomeState extends State<Home> {
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Research snapshot checked 14 November 2026. Past cutoffs are hidden automatically; new calls and changes are not fetched. Upcoming calls are labelled. Verify the official source.'))),
       const SizedBox(height: 8),
       FilledButton.icon(onPressed: enableCalendar, icon: const Icon(Icons.calendar_month), label: Text(Platform.isWindows ? 'Import calendar reminders' : 'Connect calendar')),
-      Text(Platform.isWindows ? 'Import the calendar file to add 30-day, 21-day and 14-day alerts. Previous imports are not updated automatically.' : 'The app sets alerts 30, 21 and 14 days before each listed deadline or batch. Past alert times cannot notify retroactively. Apple needs full calendar access. Older or edited events may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
+      Text(Platform.isWindows ? 'Import the calendar file to add "30 / 21 / 14 days left" reminder events with alerts. Previous imports are not updated automatically.' : 'The app adds "30 / 21 / 14 days left" reminder events, each with its own alert, before each listed deadline or batch. Past alert times cannot notify retroactively. Apple needs full calendar access. Older or edited events may need manual removal. The app does not fetch new calls.', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 16),
       TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), border: OutlineInputBorder(), labelText: 'Search opportunities'), onChanged: (v) => setState(() => query = v)),
       const SizedBox(height: 12),

@@ -83,8 +83,7 @@ class MainActivity: FlutterActivity() {
                     val title = cursor.getString(0)
                     val description = cursor.getString(1) ?: ""
                     val start = cursor.getLong(2)
-                    ownedAndPast = title == key && description.contains("Check the official source:") &&
-                        description.contains("This calendar time is a reminder") && start < System.currentTimeMillis()
+                    ownedAndPast = owns(title, description, key) && start < System.currentTimeMillis()
                 }
             }
             if (missing) prefs.edit().remove(prefKey).apply()
@@ -104,6 +103,7 @@ class MainActivity: FlutterActivity() {
             val key = item["id"] as? String ?: continue
             val time = (item["time"] as? Number)?.toLong() ?: continue
             if (time <= System.currentTimeMillis()) continue
+            val alert = item["alert"] as? Boolean ?: false
             if (prefs.contains("event:$key")) {
                 val savedId = prefs.getLong("event:$key", -1)
                 val uri = android.content.ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, savedId)
@@ -114,23 +114,24 @@ class MainActivity: FlutterActivity() {
                 cursor.use {
                     if (it.moveToFirst()) {
                         found = true
-                        val description = it.getString(1) ?: ""
-                        owned = it.getString(0) == key && description.contains("Check the official source:") && description.contains("This calendar time is a reminder")
+                        owned = owns(it.getString(0), it.getString(1) ?: "", key)
                     }
                 }
                 if (!found) prefs.edit().remove("event:$key").apply()
                 else {
                     if (owned) {
                         val updated = ContentValues().apply {
+                            put(CalendarContract.Events.TITLE, item["title"] as? String)
+                            put(CalendarContract.Events.HAS_ALARM, if (alert) 1 else 0)
                             put(CalendarContract.Events.DESCRIPTION, item["description"] as? String)
                             put(CalendarContract.Events.DTSTART, time)
                             put(CalendarContract.Events.DTEND, time + 3600000L)
                         }
                         resolver.update(uri, updated, null, null)
                         resolver.delete(CalendarContract.Reminders.CONTENT_URI,
-                            "${CalendarContract.Reminders.EVENT_ID} = ? AND ${CalendarContract.Reminders.METHOD} = ? AND ${CalendarContract.Reminders.MINUTES} IN (?, ?, ?, ?)",
-                            arrayOf(savedId.toString(), CalendarContract.Reminders.METHOD_ALERT.toString(), "1440", "43200", "30240", "20160"))
-                        addReminders(savedId)
+                            "${CalendarContract.Reminders.EVENT_ID} = ? AND ${CalendarContract.Reminders.METHOD} = ? AND ${CalendarContract.Reminders.MINUTES} IN (?, ?, ?, ?, ?)",
+                            arrayOf(savedId.toString(), CalendarContract.Reminders.METHOD_ALERT.toString(), "0", "1440", "43200", "30240", "20160"))
+                        if (alert) addReminder(savedId)
                     }
                     continue
                 }
@@ -142,26 +143,32 @@ class MainActivity: FlutterActivity() {
                 put(CalendarContract.Events.DTSTART, time)
                 put(CalendarContract.Events.DTEND, time + 3600000L)
                 put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
-                put(CalendarContract.Events.HAS_ALARM, 1)
+                put(CalendarContract.Events.HAS_ALARM, if (alert) 1 else 0)
             }
             val event = resolver.insert(CalendarContract.Events.CONTENT_URI, values) ?: continue
             val eventId = event.lastPathSegment?.toLongOrNull() ?: continue
-            try { addReminders(eventId) }
+            try { if (alert) addReminder(eventId) }
             catch (e: Exception) { resolver.delete(event, null, null); throw e }
             prefs.edit().putLong("event:$key", eventId).apply()
             added++
         }
         return if (added > 0 || removed > 0) "Added $added and removed $removed expired reminder(s)." else "Calendar connected; no new or expired app reminders to update."
     }
-    private fun addReminders(eventId: Long) {
-        for (days in listOf(30, 21, 14)) {
-            val reminder = ContentValues().apply {
-                put(CalendarContract.Reminders.EVENT_ID, eventId)
-                put(CalendarContract.Reminders.MINUTES, days * 24 * 60)
-                put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
-            }
-            contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder)
-                ?: throw IllegalStateException("Could not add calendar reminder")
+    // Deadline events use the item ID as title (as in older versions);
+    // "N days left" events carry their ID in the description.
+    private fun owns(title: String?, description: String, key: String) =
+        description.contains("Check the official source:") && description.contains("This calendar time is a reminder") &&
+            (title == key || description.contains("Grant Compass ID: $key"))
+
+    // "N days left" events alert at their own start time. Separate events avoid
+    // Google Calendar's 4-week maximum reminder offset.
+    private fun addReminder(eventId: Long) {
+        val reminder = ContentValues().apply {
+            put(CalendarContract.Reminders.EVENT_ID, eventId)
+            put(CalendarContract.Reminders.MINUTES, 0)
+            put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
         }
+        contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder)
+            ?: throw IllegalStateException("Could not add calendar reminder")
     }
 }

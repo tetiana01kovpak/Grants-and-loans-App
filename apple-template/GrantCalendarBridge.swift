@@ -73,9 +73,7 @@ final class GrantCalendarBridge {
                 defaults.removeObject(forKey: key)
                 continue
             }
-            let notes = event.notes ?? ""
-            guard event.title == title, notes.contains("Check the official source:"),
-                  notes.contains("This calendar time is a reminder"), event.startDate < Date() else { continue }
+            guard owns(event, key: title), event.startDate < Date() else { continue }
             do {
                 try store.remove(event, span: .thisEvent, commit: true)
                 defaults.removeObject(forKey: key)
@@ -92,18 +90,17 @@ final class GrantCalendarBridge {
             guard let id = item["id"] as? String, let milliseconds = item["time"] as? NSNumber else { continue }
             let date = Date(timeIntervalSince1970: milliseconds.doubleValue / 1000)
             let key = "grantEvent:" + id
+            let alert = item["alert"] as? Bool ?? false
             if let identifier = defaults.object(forKey: key) as? String, let existing = store.event(withIdentifier: identifier) {
-                let notes = existing.notes ?? ""
-                if existing.title == id && notes.contains("Check the official source:") && notes.contains("This calendar time is a reminder") && date > Date() {
+                if owns(existing, key: id) && date > Date() {
+                    existing.title = item["title"] as? String ?? existing.title
                     existing.startDate = date
                     existing.endDate = date.addingTimeInterval(3600)
                     existing.notes = item["description"] as? String
-                    for alarm in existing.alarms ?? [] where [-86400.0, -2592000.0, -1814400.0, -1209600.0].contains(alarm.relativeOffset) {
+                    for alarm in existing.alarms ?? [] where [0.0, -86400.0, -2592000.0, -1814400.0, -1209600.0].contains(alarm.relativeOffset) {
                         existing.removeAlarm(alarm)
                     }
-                    existing.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
-                    existing.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
-                    existing.addAlarm(EKAlarm(relativeOffset: -14 * 86400))
+                    if alert { existing.addAlarm(EKAlarm(relativeOffset: 0)) }
                     do { try store.save(existing, span: .thisEvent, commit: true) }
                     catch { result(FlutterError(code: "CALENDAR", message: error.localizedDescription, details: nil)); return }
                 }
@@ -119,9 +116,8 @@ final class GrantCalendarBridge {
             event.notes = item["description"] as? String
             event.startDate = date
             event.endDate = date.addingTimeInterval(3600)
-            event.addAlarm(EKAlarm(relativeOffset: -30 * 86400))
-            event.addAlarm(EKAlarm(relativeOffset: -21 * 86400))
-            event.addAlarm(EKAlarm(relativeOffset: -14 * 86400))
+            // "N days left" events alert at their own start time.
+            if alert { event.addAlarm(EKAlarm(relativeOffset: 0)) }
             do {
                 try store.save(event, span: .thisEvent, commit: true)
                 defaults.set(event.eventIdentifier, forKey: key)
@@ -131,5 +127,13 @@ final class GrantCalendarBridge {
             }
         }
         result(added > 0 || removed > 0 ? "Added \(added) and removed \(removed) expired reminder(s)." : "Calendar connected; no new or expired app reminders to update.")
+    }
+
+    // Deadline events use the item ID as title (as in older versions);
+    // "N days left" events carry their ID in the notes.
+    private func owns(_ event: EKEvent, key: String) -> Bool {
+        let notes = event.notes ?? ""
+        return notes.contains("Check the official source:") && notes.contains("This calendar time is a reminder") &&
+            (event.title == key || notes.contains("Grant Compass ID: \(key)"))
     }
 }
