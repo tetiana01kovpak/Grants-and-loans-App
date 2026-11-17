@@ -21,8 +21,8 @@ jobs:
       - run: flutter pub get
       - run: rm -f analysis_options.yaml
       - run: flutter analyze lib --no-fatal-infos
-      - run: flutter build apk --debug
+      - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
-          name: grant-compass-android-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: grant-compass-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
